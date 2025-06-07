@@ -1,0 +1,5 @@
+../Core/Src/L3GD20.c:78:6:L3GD20_Init	8	static
+../Core/Src/L3GD20.c:125:6:L3GD20_loop	104	static
+../Core/Src/L3GD20.c:340:7:get_Angle_X	4	static
+../Core/Src/L3GD20.c:344:7:get_Angle_Y	4	static
+../Core/Src/L3GD20.c:348:7:get_Angle_Z	4	static
