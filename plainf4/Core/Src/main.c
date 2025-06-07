@@ -33,7 +33,7 @@
 #define MAX_ENEMIES 15
 #define BOSS_WIDTH 40
 #define BOSS_HEIGHT 30
-#define MAX_BOSS_BULLETS 100
+#define MAX_BOSS_BULLETS 50
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -80,15 +80,11 @@ typedef struct {
   int laser_timer;
 } Boss;
 
-typedef struct {
-  int x, y;
-  int active;
-} BossBullet;
-
 EnemyPlane enemies[MAX_ENEMIES];
 Bullet bullets[MAX_BULLETS];
 Boss boss;
-BossBullet boss_bullets[100];
+Bullet boss_bullets[MAX_BOSS_BULLETS];
+int boss_bullet_count = 0;
 int plane_x = 50;
 int plane_y = 60;
 int plane_move_flag = 0;
@@ -96,6 +92,9 @@ int point = 0;
 extern const uint8_t Arial_Narrow8x12[];
 int current_enemy_count = 3; // Số địch hiện tại đang được sử dụng
 int level = 1;
+int a=1;
+uint32_t last_boss_fire_time = 0;
+const uint32_t boss_fire_interval = 3000; // 3 giây
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -187,52 +186,68 @@ void init_boss() {
 }
 
 void draw_boss(int x, int y) {
-  ILI9341_DrawRectangle(x, y, x + BOSS_WIDTH, y + BOSS_HEIGHT, RED);
+  ILI9341_DrawRectangle(x, y, BOSS_WIDTH, BOSS_HEIGHT, RED);
 }
 
 void erase_boss(int x, int y) {
-  ILI9341_DrawRectangle(x, y, x + BOSS_WIDTH, y + BOSS_HEIGHT, WHITE);
+  ILI9341_DrawRectangle(x, y, BOSS_WIDTH, BOSS_HEIGHT, WHITE);
 }
 
 void fire_boss_laser() {
-  for (int i = 0; i < MAX_BOSS_BULLETS; i++) {
-    if (!boss_bullets[i].active) {
-      boss_bullets[i].x = boss.x;
-      boss_bullets[i].y = boss.y + BOSS_HEIGHT / 2;
-      boss_bullets[i].active = 1;
-      break;
+    for (int i = 0; i < MAX_BOSS_BULLETS; i++) {
+        if (!boss_bullets[i].active) {
+            boss_bullets[i].x = boss.x ;
+            boss_bullets[i].y = boss.y;
+            boss_bullets[i].active = 1;
+            break;
+        }
     }
-  }
 }
 
 void update_boss_bullets() {
-  for (int i = 0; i < MAX_BOSS_BULLETS; i++) {
-    if (boss_bullets[i].active) {
-      ILI9341_DrawRectangle(boss_bullets[i].x, boss_bullets[i].y,
-                                  boss_bullets[i].x + 4, boss_bullets[i].y + 4, WHITE);  // Xóa cũ
-      boss_bullets[i].x -= 4;
-      if (boss_bullets[i].x < 0) {
-        boss_bullets[i].active = 0;
-      } else {
-        ILI9341_DrawRectangle(boss_bullets[i].x, boss_bullets[i].y,
-                                    boss_bullets[i].x + 4, boss_bullets[i].y + 4, MAGENTA);
-      }
-    }
-  }
+	for (int i = 0; i < MAX_BOSS_BULLETS; i++) {
+	    if (boss_bullets[i].active) {
+	      // Xóa viên đạn cũ
+	    	ILI9341_DrawRectangle(boss_bullets[i].x, boss_bullets[i].y, BULLET_WIDTH, BULLET_HEIGHT, WHITE);
+
+	      // Di chuyển đạn xuống
+	      boss_bullets[i].x -= 2;
+
+	      // Nếu ra khỏi màn hình
+	      if (boss_bullets[i].x<=0 ) {
+	        boss_bullets[i].active = 0;
+	        continue;
+	      }
+
+	      // Vẽ lại viên đạn mới
+	      ILI9341_DrawRectangle(boss_bullets[i].x, boss_bullets[i].y, BULLET_WIDTH, BULLET_HEIGHT, RED);
+
+	      // Kiểm tra va chạm với máy bay người chơi
+	      if (boss_bullets[i].x < plane_x + PLANE_WIDTH &&
+	          boss_bullets[i].x + BULLET_WIDTH > plane_x &&
+	          boss_bullets[i].y < plane_y + PLANE_HEIGHT &&
+	          boss_bullets[i].y + BULLET_HEIGHT > plane_y) {
+	        // Va chạm: Game over
+	    	  ILI9341_FillScreen(WHITE);
+	    	      	           ILI9341_DrawText("GAME OVER", FONT3, 50, 120, RED, WHITE);
+	    	      	           while (1);
+	      }
+	    }
+	  }
 }
+
 
 void update_boss() {
   if (!boss.active) return;
-
   erase_boss(boss.x, boss.y);
-  boss.x -= 1;
-
-  if (boss.x < 0) boss.x = 280; // Di chuyển lại từ phải sang trái
+  if (boss.y <= 0) a=1;
+  else if (boss.y >=210) a=-1; // Di chuyển lại từ phải sang trái
+  boss.y += a;
 
   draw_boss(boss.x, boss.y);
 
   boss.laser_timer++;
-  if (boss.laser_timer >= 50) { // Bắn laser sau mỗi 50 chu kỳ
+  if (boss.laser_timer >= 100) { // Bắn laser sau mỗi 50 chu kỳ
     fire_boss_laser();
     boss.laser_timer = 0;
   }
@@ -251,7 +266,7 @@ void check_bullet_boss_collision() {
 
       bullets[i].active = 0;
       ILI9341_DrawRectangle(bullets[i].x, bullets[i].y,
-                                  bullets[i].x + BULLET_HEIGHT, bullets[i].y + BULLET_WIDTH, WHITE);
+                                  BULLET_HEIGHT, BULLET_WIDTH, WHITE);
 
       boss.hp--;
       if (boss.hp <= 0) {
@@ -415,8 +430,10 @@ int main(void)
 
 
      while (1) {
+
     	 draw_score(point);
        update_bullets();
+       if(level <= 2){
        update_enemies(); // ← Thêm dòng này
        for (int i = 0; i <current_enemy_count ; i++) {
          if (enemies[i].active && check_collision(plane_x, plane_y, PLANE_WIDTH, PLANE_HEIGHT,
@@ -440,8 +457,19 @@ int main(void)
                    HAL_Delay(1000);  // Hiển thị 1 giây
                    ILI9341_FillScreen(WHITE);  // Dọn lại màn hình
                }
-               if(level == 3){
+       check_bullet_enemy_collision();
+              if (plane_move_flag) {
+                  plane_move_flag = 0;
+                  int old_y = plane_y;
+                  plane_y = (plane_y + 5) % 220;
+                  erase_plane(plane_x, old_y);
+                  draw_plane(plane_x, plane_y);
+                  shoot_bullet();
+              }
+       }
+       else if(level == 3){
               	 // Hiển thị thông báo level up
+
 				  ILI9341_FillScreen(WHITE);
 				  char msg[30];
 				  sprintf(msg, "FINAL BOSS", level);
@@ -449,28 +477,35 @@ int main(void)
 				  HAL_Delay(1000);  // Hiển thị 1 giây
 				  ILI9341_FillScreen(WHITE);
 				  init_boss();
-				  while(1){
-				  update_boss();
-				  update_boss_bullets();
-				  check_bullet_boss_collision();
-				  check_boss_bullet_collision_with_player();
+				  draw_boss(boss.x, boss.y);
+					  uint32_t now = HAL_GetTick(); // Lấy thời gian hiện tại (milis)
+
+					  while(1){
+					  if (now - last_boss_fire_time >= boss_fire_interval) {
+					              fire_boss_laser();
+					              last_boss_fire_time = now;
+					          }
+					  update_bullets();
+					  HAL_Delay(10);
+					          update_boss();
+					          update_boss_bullets();
+					          check_bullet_boss_collision();
+					                 if (plane_move_flag) {
+					                     plane_move_flag = 0;
+					                     int old_y = plane_y;
+					                     plane_y = (plane_y + 5) % 220;
+					                     erase_plane(plane_x, old_y);
+					                     draw_plane(plane_x, plane_y);
+					                     shoot_bullet();
+					                 }
+					  }
 				  }
                }
-       check_bullet_enemy_collision();
-       if (plane_move_flag) {
-           plane_move_flag = 0;
-           int old_y = plane_y;
-           plane_y = (plane_y + 5) % 220;
-           erase_plane(plane_x, old_y);
-           draw_plane(plane_x, plane_y);
-           shoot_bullet();
-       }
-       HAL_Delay(30); // Điều chỉnh tốc độ trò chơi
+
+       HAL_Delay(200); // Điều chỉnh tốc độ trò chơi
      }
 
-
   /* USER CODE END 3 */
-}
 
 /**
   * @brief System Clock Configuration
