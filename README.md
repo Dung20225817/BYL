@@ -26,5 +26,4 @@ Người chơi điều khiển máy bay, bắn đạn tiêu diệt boss (hình n
 
 File → Open Projects from File System... 
 
-
 Chọn thư mục project vừa clone
