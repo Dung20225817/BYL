@@ -36,7 +36,7 @@
 #define MAX_ENEMIES 15
 #define BOSS_WIDTH 40
 #define BOSS_HEIGHT 30
-#define MAX_BOSS_BULLETS 3000
+#define MAX_BOSS_BULLETS 50
 
 /* USER CODE END Includes */
 
@@ -88,12 +88,11 @@ Boss boss;
 Bullet boss_bullets[MAX_BOSS_BULLETS]; // số lượng đạn boss bắn ra tối đa
 int boss_bullet_count = 0;
 int plane_x = 50;
-int plane_y = 60;
+int plane_y = 80;
 int plane_move_flag = 0;
 int plane_move_left_flag = 0;     // Dùng cho nút trái
 int plane_move_right_flag = 0;    // Dùng cho nút phải
 int point = 0;
-int pattern = 0;
 extern const uint8_t Arial_Narrow8x12[];
 int current_enemy_count = 3; // Số địch hiện tại đang được sử dụng
 int level = 1;
@@ -117,37 +116,34 @@ static void MX_SPI5_Init(void);
 /* Game logic ----------------------------------------------------------------*/
 
 // (x,y) = (0,0) tại góc trái gần nút bấm, x theo chiểu dài, y theo chiều rộng
-void draw_plane(int x, int y) { // O(x,y) trung điểm của cạnh đáy tam giác
-	int x1 = x;
-	int y1 = y - PLANE_HEIGHT / 2;
+void draw_plane(int x, int y) { // hàm vẽ mb
+	// Thân chính (mũi máy bay)
+	ILI9341_DrawLine(x, y - 10, x + 15, y, BLUE);      // Cạnh trên
+	ILI9341_DrawLine(x + 15, y, x, y + 10, BLUE);      // Cạnh dưới
+	ILI9341_DrawLine(x, y + 10, x, y - 10, BLUE);      // Lưng
 
-	int x2 = x;
-	int y2 = y + PLANE_HEIGHT / 2;
+	// Cánh máy bay
+	ILI9341_DrawLine(x + 5, y - 6, x - 10, y - 10, GREEN);
+	ILI9341_DrawLine(x + 5, y + 6, x - 10, y + 10, GREEN);
 
-	int x3 = x + PLANE_WIDTH;
-	int y3 = y;
-
-	// Vẽ viền tam giác
-	ILI9341_DrawLine(x1, y1, x2, y2, BLUE);
-	ILI9341_DrawLine(x2, y2, x3, y3, BLUE);
-	ILI9341_DrawLine(x3, y3, x1, y1, BLUE);
-	// Nếu có hàm tô màu tam giác:
+	// Đuôi máy bay
+	ILI9341_DrawLine(x - 5, y - 5, x - 12, y - 5, RED);
+	ILI9341_DrawLine(x - 5, y + 5, x - 12, y + 5, RED);
 }
 
-void erase_plane(int x, int y) { // hàm xóa máy bay
-	int x1 = x;
-	int y1 = y - PLANE_HEIGHT / 2;
+void erase_plane(int x, int y) {
+	// Xóa thân chính
+	ILI9341_DrawLine(x, y - 10, x + 15, y, WHITE);     // Cạnh trên
+	ILI9341_DrawLine(x + 15, y, x, y + 10, WHITE);     // Cạnh dưới
+	ILI9341_DrawLine(x, y + 10, x, y - 10, WHITE);     // Lưng
 
-	int x2 = x;
-	int y2 = y + PLANE_HEIGHT / 2;
+	// Xóa cánh máy bay
+	ILI9341_DrawLine(x + 5, y - 6, x - 10, y - 10, WHITE);
+	ILI9341_DrawLine(x + 5, y + 6, x - 10, y + 10, WHITE);
 
-	int x3 = x + PLANE_WIDTH;
-	int y3 = y;
-
-	// Vẽ lại bằng màu nền (trắng)
-	ILI9341_DrawLine(x1, y1, x2, y2, WHITE);
-	ILI9341_DrawLine(x2, y2, x3, y3, WHITE);
-	ILI9341_DrawLine(x3, y3, x1, y1, WHITE);
+	// Xóa đuôi máy bay
+	ILI9341_DrawLine(x - 5, y - 5, x - 12, y - 5, WHITE);
+	ILI9341_DrawLine(x - 5, y + 5, x - 12, y + 5, WHITE);
 }
 
 void draw_enemies(int x, int y) { //hàm vẽ enemies
@@ -165,12 +161,12 @@ void init_enemies() { //hàm khởi tạo enemies
 void erase_enemies(int x, int y) { //hàm xóa enemies
 	ILI9341_DrawRectangle(x, y, PLANE_WIDTH, PLANE_HEIGHT, WHITE);
 }
-
 void update_enemies() { //hàm cập nhật enemies
 	for (int i = 0; i < current_enemy_count; i++) {
 		if (enemies[i].active) {
 			erase_enemies(enemies[i].x, enemies[i].y);
-			enemies[i].x -= 2;
+
+					enemies[i].x -= level;
 
 			if (enemies[i].x <= 0) {
 				enemies[i].x = 320;
@@ -346,7 +342,6 @@ void update_boss_bullets() { // hàm cập nhật tình trạng đạn của bos
 		}
 	}
 }
-
 void check_lose(int i) {
 // Kiểm tra va chạm với máy bay người chơi
 	for (int j = i; j < i + 3; j++) {
@@ -411,6 +406,37 @@ int check_bullet_boss_collision() {
 	return 0;
 }
 
+void show_victory_screen() { //màn hình chiến thắng
+	ILI9341_FillScreen(BLACK);
+
+// Hiệu ứng "pháo hoa" đơn giản
+	for (int r = 0; r < 60; r += 4) {
+		ILI9341_DrawHollowCircle(80, 80, r, YELLOW);
+		ILI9341_DrawHollowCircle(240, 100, r, GREEN);
+		ILI9341_DrawHollowCircle(160, 160, r, RED);
+		HAL_Delay(30);
+	}
+
+// Tiêu đề chiến thắng
+	ILI9341_DrawText("YOU WIN!", FONT3, 90, 100, GREEN, BLACK);
+	ILI9341_DrawText("Congratulations", FONT3, 60, 160, WHITE, BLACK);
+	ILI9341_DrawText("Press RESET to play again", FONT2, 30, 270, CYAN, BLACK);
+}
+
+void show_game_over_screen() {
+	ILI9341_FillScreen(BLACK);
+
+	ILI9341_DrawText("GAME OVER", FONT3, 80, 80, RED, BLACK);
+	ILI9341_DrawText("Thanks for playing!", FONT3, 60, 140, WHITE, BLACK);
+
+	for (int r = 0; r < 50; r += 5) {
+		ILI9341_DrawFilledCircle(160, 240, r, YELLOW);
+		HAL_Delay(30);
+	}
+
+	ILI9341_DrawText("Press RESET to play again", FONT2, 40, 270, BLUE, BLACK);
+}
+
 //void check_boss_bullet_collision_with_player() {
 //	// hàm check va chạm của máy bay và đạn cuẩ boss
 //	for (int i = 0; i < MAX_BOSS_BULLETS; i++) {
@@ -431,7 +457,7 @@ int check_bullet_boss_collision() {
 //}
 
 void draw_bullet(Bullet *b) {
-	ILI9341_DrawRectangle(b->x, b->y, BULLET_HEIGHT, BULLET_WIDTH, BLUE);
+	ILI9341_DrawRectangle(b->x, b->y, BULLET_HEIGHT, BULLET_WIDTH, RED);
 }
 
 void erase_bullet(Bullet *b) {
@@ -439,7 +465,7 @@ void erase_bullet(Bullet *b) {
 }
 
 void shoot_bullet() {
-//hàm khởi tạo đạn của máy bay
+	//hàm khởi tạo đạn của máy bay
 	for (int i = 0; i < MAX_BULLETS; i++) {
 		if (!bullets[i].active) {
 			bullets[i].x = plane_x + PLANE_WIDTH;
@@ -451,7 +477,7 @@ void shoot_bullet() {
 }
 
 void update_bullets() {
-//hàm cập nhật tình trạng đạn, nếu viên đạn active thì sẽ di chuyển lên
+	//hàm cập nhật tình trạng đạn, nếu viên đạn active thì sẽ di chuyển lên
 	for (int i = 0; i < MAX_BULLETS; i++) {
 		if (bullets[i].active) {
 			erase_bullet(&bullets[i]);
@@ -469,10 +495,10 @@ void draw_score(int point) {
 	char buffer[20];
 	sprintf(buffer, "Score: %d", point);
 
-// Xóa vùng cũ (giả sử vùng rộng 120px, cao 18px)
+	// Xóa vùng cũ (giả sử vùng rộng 120px, cao 18px)
 	ILI9341_DrawRectangle(0, 0, 120, 18, WHITE);
 
-// Vẽ chuỗi mới (x=0, y=0), dùng font 11x18
+	// Vẽ chuỗi mới (x=0, y=0), dùng font 11x18
 	ILI9341_DrawText(buffer, Arial_Narrow8x12, 0, 0, BLACK, WHITE);
 }
 
@@ -517,37 +543,6 @@ int check_collision(int x1, int y1, int w1, int h1, int x2, int y2, int w2,
 			x2 + w2 <= x1 ||  // máy bay địch hoàn toàn ở dưới máy bay ta
 			y1 + h1 / 2 <= y2 ||  // máy bay ta hoàn toàn bên phải máy bay đich
 			y1 - h1 / 2 >= y2 + h2); // máy bay địch ở hoàn toàn bên phải máy bay ta
-}
-
-void show_victory_screen() { //màn hình chiến thắng
-	ILI9341_FillScreen(BLACK);
-
-// Hiệu ứng "pháo hoa" đơn giản
-	for (int r = 0; r < 60; r += 4) {
-		ILI9341_DrawHollowCircle(80, 80, r, YELLOW);
-		ILI9341_DrawHollowCircle(240, 100, r, GREEN);
-		ILI9341_DrawHollowCircle(160, 160, r, RED);
-		HAL_Delay(30);
-	}
-
-// Tiêu đề chiến thắng
-	ILI9341_DrawText("YOU WIN!", FONT3, 90, 100, GREEN, BLACK);
-	ILI9341_DrawText("Congratulations", FONT3, 60, 160, WHITE, BLACK);
-	ILI9341_DrawText("Press RESET to play again", FONT2, 30, 270, CYAN, BLACK);
-}
-
-void show_game_over_screen() {
-	ILI9341_FillScreen(BLACK);
-
-	ILI9341_DrawText("GAME OVER", FONT3, 80, 80, RED, BLACK);
-	ILI9341_DrawText("Thanks for playing!", FONT3, 60, 140, WHITE, BLACK);
-
-	for (int r = 0; r < 50; r += 5) {
-		ILI9341_DrawFilledCircle(160, 240, r, YELLOW);
-		HAL_Delay(30);
-	}
-
-	ILI9341_DrawText("Press RESET to play again", FONT2, 40, 270, BLUE, BLACK);
 }
 
 /* USER CODE END 0 */
@@ -646,7 +641,7 @@ int main(void) {
 //				erase_plane(old_x, plane_y);
 //				draw_plane(plane_x, plane_y);
 					int old_y = plane_y;
-					plane_y = (plane_y + 5) % 220;
+					plane_y = (plane_y + 10) % 220;
 					erase_plane(plane_x, old_y);
 					draw_plane(plane_x, plane_y);
 				}
@@ -654,7 +649,7 @@ int main(void) {
 				if (plane_move_right_flag) {
 					plane_move_right_flag = 0;
 					int old_y = plane_y;
-					plane_y = (plane_y - 5) % 220;
+					plane_y = (plane_y - 10) % 220;
 					erase_plane(plane_x, old_y);
 					draw_plane(plane_x, plane_y);
 				}
@@ -679,7 +674,7 @@ int main(void) {
 				char msg[30];
 				sprintf(msg, "FINAL BOSS", level);
 				ILI9341_DrawText(msg, FONT3, 50, 120, BLUE, WHITE);
-				HAL_Delay(2000);  // Hiển thị 1 giây
+				HAL_Delay(1000);  // Hiển thị 1 giây
 				ILI9341_FillScreen(WHITE);
 				init_boss();
 				draw_boss(boss.x, boss.y);
@@ -699,13 +694,34 @@ int main(void) {
 						while (1)
 							;  // Dừng trò chơi
 					}
+
+//				if (plane_move_flag) {
+//					plane_move_flag = 0;
+//					int old_y = plane_y;
+//					plane_y = (plane_y + 5) % 220;
+//					erase_plane(plane_x, old_y);
+//					draw_plane(plane_x, plane_y);
+//					shoot_bullet();
+//				}
 					if (plane_move_flag) {
 						plane_move_flag = 0;
+						shoot_bullet();  // chỉ bắn, không di chuyển
+					}
+
+					if (plane_move_left_flag) {
+						plane_move_left_flag = 0;
 						int old_y = plane_y;
 						plane_y = (plane_y + 5) % 220;
 						erase_plane(plane_x, old_y);
 						draw_plane(plane_x, plane_y);
-						shoot_bullet();
+					}
+
+					if (plane_move_right_flag) {
+						plane_move_right_flag = 0;
+						int old_y = plane_y;
+						plane_y = (plane_y - 5) % 220;
+						erase_plane(plane_x, old_y);
+						draw_plane(plane_x, plane_y);
 					}
 				}
 			}
@@ -894,7 +910,7 @@ static void MX_GPIO_Init(void) {
 
 	/*Configure GPIO pins : PD8 PD10 */
 	GPIO_InitStruct.Pin = GPIO_PIN_8 | GPIO_PIN_10;
-	GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+	GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
 	GPIO_InitStruct.Pull = GPIO_PULLDOWN;
 	HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
