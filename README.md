@@ -25,5 +25,13 @@ Người chơi điều khiển máy bay, bắn đạn tiêu diệt boss (hình n
 2. **Mở project bằng STM32CubeIDE**:
 
 - File → Open Projects from File System... 
-
 - Chọn thư mục project vừa clone
+- Kết nối ST-Link và nhấn "Run" để nạp firmware
+## 🎮 Điều khiển
+|   Hành động	  |            Mô tả                        |
+|----------------|-----------------------------------------|
+|Máy bay bắn đạn |Tự động bắn theo chu kỳ, điều khiển bằng nút bấm           |
+|Máy bay địch	  |  Tăng dần số lượng theo mỗi màn chơi    |
+|Boss            |Bắn ra nhiều kiểu: shotgun, burst, wave  |
+|Kết thúc	     |Thắng nếu boss bị tiêu diệt              |
+  
