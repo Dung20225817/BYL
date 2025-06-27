@@ -22,6 +22,9 @@ Người chơi điều khiển máy bay, bắn đạn tiêu diệt boss (hình n
 1. **Clone repository**:
    ```bash
    git clone https://github.com/Dung20225817/BYL.git
-2. **Mở project bằng STM32CubeIDE**: .
-File → Open Projects from File System... .
+2. **Mở project bằng STM32CubeIDE**:
+
+File → Open Projects from File System... 
+
+
 Chọn thư mục project vừa clone
