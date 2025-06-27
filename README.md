@@ -34,8 +34,9 @@ Tiêu diệt Boss trước khi pháp lực cạn kiệt!
 1. **Clone repository**:
    ```bash
    git clone https://github.com/Dung20225817/BYL.git
-2. **Mở project bằng STM32CubeIDE**:
-
+2. **Kết nối phần cứng**:
+- Kết nối KIT STM32f429zit6 với các nút bấm bằng chân PD8 và PD10
+3. **Mở project bằng STM32CubeIDE**:
 - File → Open Projects from File System... 
 - Chọn thư mục project vừa clone
 - Kết nối ST-Link và nhấn "Run" để nạp firmware
