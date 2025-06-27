@@ -60,8 +60,8 @@ all: main-build
 main-build: plainf4.elf secondary-outputs
 
 # Tool invocations
-plainf4.elf plainf4.map: $(OBJS) $(USER_OBJS) D:\STM32-data\plainf4\STM32F429ZITX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "plainf4.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"D:\STM32-data\plainf4\STM32F429ZITX_FLASH.ld" --specs=nosys.specs -Wl,-Map="plainf4.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+plainf4.elf plainf4.map: $(OBJS) $(USER_OBJS) E:\BYL-main\plainf4\STM32F429ZITX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "plainf4.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"E:\BYL-main\plainf4\STM32F429ZITX_FLASH.ld" --specs=nosys.specs -Wl,-Map="plainf4.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

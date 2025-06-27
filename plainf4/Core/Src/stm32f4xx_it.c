@@ -20,13 +20,13 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f4xx_it.h"
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
 #include "ILI9341_GFX.h"
 #include "fonts.h"
 #include "ILI9341_STM32_Driver.h"
 #define PLANE_WIDTH  20
 #define PLANE_HEIGHT 20
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -56,13 +56,22 @@
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void shoot_bullet(void);
+void erase_plane(int x, int y);
+void draw_plane(int x, int y);
+extern int plane_x;
+extern int plane_y;
+extern int plane_move_flag;
+extern int plane_move_left_flag;
+extern int plane_move_right_flag;
 
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
 extern DMA_HandleTypeDef hdma_spi5_tx;
 /* USER CODE BEGIN EV */
-
+#define DEBOUNCE_DELAY 100  // milliseconds
+uint32_t last_interrupt_time = 0;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -206,23 +215,58 @@ void SysTick_Handler(void)
 /**
   * @brief This function handles EXTI line0 interrupt.
   */
-void shoot_bullet(void);
-void erase_plane(int x, int y);
-void draw_plane(int x, int y);
-extern int plane_x;
-extern int plane_y;
-extern int plane_move_flag;
-
 void EXTI0_IRQHandler(void)
 {
   /* USER CODE BEGIN EXTI0_IRQn 0 */
-	HAL_GPIO_TogglePin(GPIOG, GPIO_PIN_13);
+	//HAL_GPIO_TogglePin(GPIOG, GPIO_PIN_13);
     plane_move_flag = 1;
   /* USER CODE END EXTI0_IRQn 0 */
   HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
   /* USER CODE BEGIN EXTI0_IRQn 1 */
-
+////
   /* USER CODE END EXTI0_IRQn 1 */
+}
+
+/**
+  * @brief This function handles EXTI line[9:5] interrupts.
+  */
+void EXTI9_5_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI9_5_IRQn 0 */
+	uint32_t current_time = HAL_GetTick();
+
+		if (current_time - last_interrupt_time > DEBOUNCE_DELAY)
+		{
+			// Xử lý nút hợp lệ
+			plane_move_left_flag = 1;
+			last_interrupt_time = current_time;
+		}
+  /* USER CODE END EXTI9_5_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_8);
+  /* USER CODE BEGIN EXTI9_5_IRQn 1 */
+
+  /* USER CODE END EXTI9_5_IRQn 1 */
+}
+
+/**
+  * @brief This function handles EXTI line[15:10] interrupts.
+  */
+void EXTI15_10_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI15_10_IRQn 0 */
+	uint32_t current_time = HAL_GetTick();
+
+	if (current_time - last_interrupt_time > DEBOUNCE_DELAY)
+	{
+		// Xử lý nút hợp lệ
+		plane_move_right_flag = 1;
+		last_interrupt_time = current_time;
+	}
+  /* USER CODE END EXTI15_10_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_10);
+  /* USER CODE BEGIN EXTI15_10_IRQn 1 */
+
+  /* USER CODE END EXTI15_10_IRQn 1 */
 }
 
 /**
