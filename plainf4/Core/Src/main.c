@@ -88,7 +88,7 @@ Boss boss;
 Bullet boss_bullets[MAX_BOSS_BULLETS]; // số lượng đạn boss bắn ra tối đa
 int boss_bullet_count = 0;
 int plane_x = 50;
-int plane_y = 80;
+int plane_y = 120;
 int plane_move_flag = 0;
 int plane_move_left_flag = 0;     // Dùng cho nút trái
 int plane_move_right_flag = 0;    // Dùng cho nút phải
@@ -166,7 +166,7 @@ void update_enemies() { //hàm cập nhật enemies
 		if (enemies[i].active) {
 			erase_enemies(enemies[i].x, enemies[i].y);
 
-					enemies[i].x -= level;
+			enemies[i].x -= level;
 
 			if (enemies[i].x <= 0) {
 				enemies[i].x = 320;
@@ -641,7 +641,9 @@ int main(void) {
 //				erase_plane(old_x, plane_y);
 //				draw_plane(plane_x, plane_y);
 					int old_y = plane_y;
-					plane_y = (plane_y + 10) % 220;
+					if (plane_y < 220) {
+						plane_y = plane_y + 10;
+					}
 					erase_plane(plane_x, old_y);
 					draw_plane(plane_x, plane_y);
 				}
@@ -649,7 +651,9 @@ int main(void) {
 				if (plane_move_right_flag) {
 					plane_move_right_flag = 0;
 					int old_y = plane_y;
-					plane_y = (plane_y - 10) % 220;
+					if (plane_y > 30) {
+						plane_y = plane_y - 10;
+					}
 					erase_plane(plane_x, old_y);
 					draw_plane(plane_x, plane_y);
 				}
@@ -910,7 +914,7 @@ static void MX_GPIO_Init(void) {
 
 	/*Configure GPIO pins : PD8 PD10 */
 	GPIO_InitStruct.Pin = GPIO_PIN_8 | GPIO_PIN_10;
-	GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+	GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
 	GPIO_InitStruct.Pull = GPIO_PULLDOWN;
 	HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
