@@ -99,6 +99,10 @@ int level = 1;
 int a = 1; //biến a thay đổi để tính di chuyển của boss
 uint32_t last_boss_fire_time = 0;
 const uint32_t boss_fire_interval = 3000; // 3 giây
+uint32_t level_start_time = 0;
+uint32_t current_time = 0;
+const uint32_t LEVEL_DURATION = 30000; // 30 giây
+uint32_t boss_start_time = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -115,39 +119,239 @@ static void MX_SPI5_Init(void);
 /* USER CODE BEGIN 0 */
 /* Game logic ----------------------------------------------------------------*/
 
-// (x,y) = (0,0) tại góc trái gần nút bấm, x theo chiểu dài, y theo chiều rộng
-void draw_plane(int x, int y) { // hàm vẽ mb
-	// Thân chính (mũi máy bay)
-	ILI9341_DrawLine(x, y - 10, x + 15, y, BLUE);      // Cạnh trên
-	ILI9341_DrawLine(x + 15, y, x, y + 10, BLUE);      // Cạnh dưới
-	ILI9341_DrawLine(x, y + 10, x, y - 10, BLUE);      // Lưng
 
-	// Cánh máy bay
-	ILI9341_DrawLine(x + 5, y - 6, x - 10, y - 10, GREEN);
-	ILI9341_DrawLine(x + 5, y + 6, x - 10, y + 10, GREEN);
+void draw_plane(int x, int y) {
+	// Định nghĩa màu sắc
+	uint16_t fuselage_color = 0x4208;   // Xám đậm (thân máy bay)
+	    uint16_t wing_color = 0x2104;       // Xám rất đậm (cánh)
+	    uint16_t nose_color = 0xF800;       // Đỏ (mũi)
+	    uint16_t window_color = 0x001F;     // Xanh dương (cửa sổ)
+	    uint16_t engine_color = 0x0000;     // Đen (động cơ)
+	    uint16_t detail_color = 0x0000;     // Đen (chi tiết)
 
-	// Đuôi máy bay
-	ILI9341_DrawLine(x - 5, y - 5, x - 12, y - 5, RED);
-	ILI9341_DrawLine(x - 5, y + 5, x - 12, y + 5, RED);
+	    // Thân máy bay chính - hình oval mượt mà
+	    // Phần giữa thân (dày nhất)
+	    ILI9341_DrawLine(x-14, y, x+16, y, fuselage_color);
+	    ILI9341_DrawLine(x-13, y-1, x+15, y-1, fuselage_color);
+	    ILI9341_DrawLine(x-13, y+1, x+15, y+1, fuselage_color);
+	    ILI9341_DrawLine(x-12, y-2, x+14, y-2, fuselage_color);
+	    ILI9341_DrawLine(x-12, y+2, x+14, y+2, fuselage_color);
+	    ILI9341_DrawLine(x-10, y-3, x+12, y-3, fuselage_color);
+	    ILI9341_DrawLine(x-10, y+3, x+12, y+3, fuselage_color);
+
+	    // Mũi máy bay - hình côn đẹp
+	    ILI9341_DrawPixel(x-18, y, nose_color);
+	    ILI9341_DrawLine(x-17, y-1, x-17, y+1, nose_color);
+	    ILI9341_DrawLine(x-16, y-2, x-16, y+2, nose_color);
+	    ILI9341_DrawLine(x-15, y-2, x-15, y+2, nose_color);
+	    // Viền mũi
+	    ILI9341_DrawPixel(x-16, y-3, detail_color);
+	    ILI9341_DrawPixel(x-16, y+3, detail_color);
+
+	    // Đuôi máy bay - thiết kế phức tạp
+	    ILI9341_DrawLine(x+13, y-4, x+13, y+4, fuselage_color);
+	    ILI9341_DrawLine(x+14, y-3, x+14, y+3, fuselage_color);
+	    ILI9341_DrawLine(x+15, y-2, x+15, y+2, fuselage_color);
+	    ILI9341_DrawLine(x+16, y-1, x+16, y+1, fuselage_color);
+//	    // Cánh đuôi dọc
+//	    ILI9341_DrawLine(x+14, y-6, x+14, y-4, wing_color);
+//	    ILI9341_DrawLine(x+15, y-5, x+15, y-3, wing_color);
+//	    ILI9341_DrawLine(x+16, y-4, x+16, y-2, wing_color);
+
+	    // Cánh chính - thiết kế cong đẹp
+	    // Cánh trên
+	    ILI9341_DrawLine(x-2, y-16, x+8, y-8, wing_color);
+	    ILI9341_DrawLine(x-1, y-15, x+7, y-7, wing_color);
+	    ILI9341_DrawLine(x, y-14, x+6, y-6, wing_color);
+	    ILI9341_DrawLine(x+1, y-13, x+5, y-5, wing_color);
+	    ILI9341_DrawLine(x+2, y-12, x+4, y-4, wing_color);
+
+	    // Cánh dưới
+	    ILI9341_DrawLine(x-2, y+16, x+8, y+8, wing_color);
+	    ILI9341_DrawLine(x-1, y+15, x+7, y+7, wing_color);
+	    ILI9341_DrawLine(x, y+14, x+6, y+6, wing_color);
+	    ILI9341_DrawLine(x+1, y+13, x+5, y+5, wing_color);
+	    ILI9341_DrawLine(x+2, y+12, x+4, y+4, wing_color);
+
+	    // Viền cánh
+	    ILI9341_DrawLine(x-2, y-16, x-1, y-15, detail_color);
+	    ILI9341_DrawLine(x-2, y+16, x-1, y+15, detail_color);
+	    ILI9341_DrawLine(x+7, y-8, x+8, y-7, detail_color);
+	    ILI9341_DrawLine(x+7, y+8, x+8, y+7, detail_color);
+
+	    // Cánh đuôi ngang - nhỏ và thanh lịch
+	    ILI9341_DrawLine(x-8, y-6, x-4, y-4, wing_color);
+	    ILI9341_DrawLine(x-8, y+6, x-4, y+4, wing_color);
+	    ILI9341_DrawLine(x-7, y-5, x-5, y-3, wing_color);
+ILI9341_DrawLine(x-7, y+5, x-5, y+3, wing_color);
+
+	    // Động cơ - hình trụ thực tế
+	    // Động cơ trên
+	    ILI9341_DrawLine(x-1, y-11, x+3, y-9, engine_color);
+	    ILI9341_DrawLine(x-1, y-10, x+3, y-8, engine_color);
+	    ILI9341_DrawLine(x, y-12, x+2, y-10, engine_color);
+	    ILI9341_DrawPixel(x-1, y-12, detail_color);
+	    ILI9341_DrawPixel(x+3, y-8, detail_color);
+
+	    // Động cơ dưới
+	    ILI9341_DrawLine(x-1, y+11, x+3, y+9, engine_color);
+	    ILI9341_DrawLine(x-1, y+10, x+3, y+8, engine_color);
+	    ILI9341_DrawLine(x, y+12, x+2, y+10, engine_color);
+	    ILI9341_DrawPixel(x-1, y+12, detail_color);
+	    ILI9341_DrawPixel(x+3, y+8, detail_color);
+
+	    // Cửa sổ máy bay - hàng cửa sổ đẹp
+	    ILI9341_DrawPixel(x-10, y-1, window_color);
+	    ILI9341_DrawPixel(x-8, y-1, window_color);
+	    ILI9341_DrawPixel(x-6, y-1, window_color);
+	    ILI9341_DrawPixel(x-4, y-1, window_color);
+	    ILI9341_DrawPixel(x-10, y+1, window_color);
+	    ILI9341_DrawPixel(x-8, y+1, window_color);
+	    ILI9341_DrawPixel(x-6, y+1, window_color);
+	    ILI9341_DrawPixel(x-4, y+1, window_color);
+
+	    // Cửa sổ cabin lái
+	    ILI9341_DrawPixel(x-12, y, window_color);
+	    ILI9341_DrawPixel(x-11, y-1, window_color);
+	    ILI9341_DrawPixel(x-11, y+1, window_color);
+
+	    // Chi tiết trang trí
+	    ILI9341_DrawLine(x-5, y, x+5, y, detail_color);  // Đường viền thân
+	    ILI9341_DrawPixel(x+10, y-1, detail_color);      // Logo/chi tiết
+	    ILI9341_DrawPixel(x+10, y+1, detail_color);
 }
 
 void erase_plane(int x, int y) {
-	// Xóa thân chính
-	ILI9341_DrawLine(x, y - 10, x + 15, y, WHITE);     // Cạnh trên
-	ILI9341_DrawLine(x + 15, y, x, y + 10, WHITE);     // Cạnh dưới
-	ILI9341_DrawLine(x, y + 10, x, y - 10, WHITE);     // Lưng
 
-	// Xóa cánh máy bay
-	ILI9341_DrawLine(x + 5, y - 6, x - 10, y - 10, WHITE);
-	ILI9341_DrawLine(x + 5, y + 6, x - 10, y + 10, WHITE);
 
-	// Xóa đuôi máy bay
-	ILI9341_DrawLine(x - 5, y - 5, x - 12, y - 5, WHITE);
-	ILI9341_DrawLine(x - 5, y + 5, x - 12, y + 5, WHITE);
+	// Định nghĩa màu sắc
+	    uint16_t fuselage_color = 0xFFFFF;   // trắng
+	    uint16_t wing_color = 0xFFFFF;   // trắng
+	    uint16_t nose_color = 0xFFFFF;   // trắng
+	    uint16_t window_color = 0xFFFFF;   // trắng
+	    uint16_t engine_color = 0xFFFFF;   // trắng
+	    uint16_t detail_color = 0xFFFFF;   // trắng
+
+	    // Thân máy bay chính - hình oval mượt mà
+	    // Phần giữa thân (dày nhất)
+	    ILI9341_DrawLine(x-14, y, x+16, y, fuselage_color);
+	    ILI9341_DrawLine(x-13, y-1, x+15, y-1, fuselage_color);
+	    ILI9341_DrawLine(x-13, y+1, x+15, y+1, fuselage_color);
+	    ILI9341_DrawLine(x-12, y-2, x+14, y-2, fuselage_color);
+	    ILI9341_DrawLine(x-12, y+2, x+14, y+2, fuselage_color);
+	    ILI9341_DrawLine(x-10, y-3, x+12, y-3, fuselage_color);
+	    ILI9341_DrawLine(x-10, y+3, x+12, y+3, fuselage_color);
+
+	    // Mũi máy bay - hình côn đẹp
+	    ILI9341_DrawPixel(x-18, y, nose_color);
+	    ILI9341_DrawLine(x-17, y-1, x-17, y+1, nose_color);
+	    ILI9341_DrawLine(x-16, y-2, x-16, y+2, nose_color);
+	    ILI9341_DrawLine(x-15, y-2, x-15, y+2, nose_color);
+	    // Viền mũi
+	    ILI9341_DrawPixel(x-16, y-3, detail_color);
+	    ILI9341_DrawPixel(x-16, y+3, detail_color);
+
+	    // Đuôi máy bay - thiết kế phức tạp
+	    ILI9341_DrawLine(x+13, y-4, x+13, y+4, fuselage_color);
+	    ILI9341_DrawLine(x+14, y-3, x+14, y+3, fuselage_color);
+ILI9341_DrawLine(x+15, y-2, x+15, y+2, fuselage_color);
+	    ILI9341_DrawLine(x+16, y-1, x+16, y+1, fuselage_color);
+
+	    // Cánh chính - thiết kế cong đẹp
+	    // Cánh trên
+	    ILI9341_DrawLine(x-2, y-16, x+8, y-8, wing_color);
+	    ILI9341_DrawLine(x-1, y-15, x+7, y-7, wing_color);
+	    ILI9341_DrawLine(x, y-14, x+6, y-6, wing_color);
+	    ILI9341_DrawLine(x+1, y-13, x+5, y-5, wing_color);
+	    ILI9341_DrawLine(x+2, y-12, x+4, y-4, wing_color);
+
+	    // Cánh dưới
+	    ILI9341_DrawLine(x-2, y+16, x+8, y+8, wing_color);
+	    ILI9341_DrawLine(x-1, y+15, x+7, y+7, wing_color);
+	    ILI9341_DrawLine(x, y+14, x+6, y+6, wing_color);
+	    ILI9341_DrawLine(x+1, y+13, x+5, y+5, wing_color);
+	    ILI9341_DrawLine(x+2, y+12, x+4, y+4, wing_color);
+
+	    // Viền cánh
+	    ILI9341_DrawLine(x-2, y-16, x-1, y-15, detail_color);
+	    ILI9341_DrawLine(x-2, y+16, x-1, y+15, detail_color);
+	    ILI9341_DrawLine(x+7, y-8, x+8, y-7, detail_color);
+	    ILI9341_DrawLine(x+7, y+8, x+8, y+7, detail_color);
+
+	    // Cánh đuôi ngang - nhỏ và thanh lịch
+	    ILI9341_DrawLine(x-8, y-6, x-4, y-4, wing_color);
+	    ILI9341_DrawLine(x-8, y+6, x-4, y+4, wing_color);
+	    ILI9341_DrawLine(x-7, y-5, x-5, y-3, wing_color);
+	    ILI9341_DrawLine(x-7, y+5, x-5, y+3, wing_color);
+
+	    // Động cơ - hình trụ thực tế
+	    // Động cơ trên
+	    ILI9341_DrawLine(x-1, y-11, x+3, y-9, engine_color);
+	    ILI9341_DrawLine(x-1, y-10, x+3, y-8, engine_color);
+	    ILI9341_DrawLine(x, y-12, x+2, y-10, engine_color);
+	    ILI9341_DrawPixel(x-1, y-12, detail_color);
+	    ILI9341_DrawPixel(x+3, y-8, detail_color);
+
+	    // Động cơ dưới
+	    ILI9341_DrawLine(x-1, y+11, x+3, y+9, engine_color);
+	    ILI9341_DrawLine(x-1, y+10, x+3, y+8, engine_color);
+	    ILI9341_DrawLine(x, y+12, x+2, y+10, engine_color);
+	    ILI9341_DrawPixel(x-1, y+12, detail_color);
+	    ILI9341_DrawPixel(x+3, y+8, detail_color);
+
+	    // Cửa sổ máy bay - hàng cửa sổ đẹp
+	    ILI9341_DrawPixel(x-10, y-1, window_color);
+	    ILI9341_DrawPixel(x-8, y-1, window_color);
+	    ILI9341_DrawPixel(x-6, y-1, window_color);
+	    ILI9341_DrawPixel(x-4, y-1, window_color);
+	    ILI9341_DrawPixel(x-10, y+1, window_color);
+	    ILI9341_DrawPixel(x-8, y+1, window_color);
+	    ILI9341_DrawPixel(x-6, y+1, window_color);
+	    ILI9341_DrawPixel(x-4, y+1, window_color);
+
+	    // Cửa sổ cabin lái
+	    ILI9341_DrawPixel(x-12, y, window_color);
+	    ILI9341_DrawPixel(x-11, y-1, window_color);
+	    ILI9341_DrawPixel(x-11, y+1, window_color);
+
+	    // Chi tiết trang trí
+	    ILI9341_DrawLine(x-5, y, x+5, y, detail_color);  // Đường viền thân
+	    ILI9341_DrawPixel(x+10, y-1, detail_color);      // Logo/chi tiết
+	    ILI9341_DrawPixel(x+10, y+1, detail_color);
 }
 
-void draw_enemies(int x, int y) { //hàm vẽ enemies
-	ILI9341_DrawRectangle(x, y, PLANE_WIDTH, PLANE_HEIGHT, GREEN);
+
+//void draw_enemies(int x, int y) { //hàm vẽ enemies
+//	ILI9341_DrawRectangle(x, y, PLANE_WIDTH, PLANE_HEIGHT, GREEN);
+//}
+//void erase_enemies(int x, int y) { //hàm xóa enemies
+//	ILI9341_DrawRectangle(x, y, PLANE_WIDTH, PLANE_HEIGHT, WHITE);
+//}
+void draw_enemies(int x, int y) { // hàm vẽ enemies
+    // Thân chính (bay từ trên xuống - mũi hướng xuống)
+    ILI9341_DrawRectangle(x + 5, y + 8, 15, 4, DARKGREEN);  // thân trung tâm
+    ILI9341_DrawRectangle(x + 2, y + 10, 8, 2, DARKGREEN);  // mũi nhọn
+
+    // Cánh delta (quay 90 độ)
+    ILI9341_DrawRectangle(x + 8, y + 2, 6, 16, GREEN);      // cánh chính
+    ILI9341_DrawRectangle(x + 6, y + 4, 10, 12, GREEN);     // phần cánh rộng
+    ILI9341_DrawRectangle(x + 4, y + 6, 14, 8, GREEN);      // phần cánh trong
+
+    // Động cơ phía sau (2 ống ở phía trên)
+    ILI9341_DrawRectangle(x + 18, y + 4, 4, 3, DARKGREEN); // động cơ trên
+    ILI9341_DrawRectangle(x + 18, y + 13, 4, 3, DARKGREEN);// động cơ dưới
+
+    // Cockpit (buồng lái)
+    ILI9341_DrawRectangle(x + 7, y + 9, 4, 2, BLUE);
+
+    // Chi tiết nhỏ (đèn cảnh báo)
+    ILI9341_DrawPixel(x + 10, y + 6, RED);
+    ILI9341_DrawPixel(x + 10, y + 14, RED);
+}
+
+void erase_enemies(int x, int y) { // hàm xóa enemies
+    // Xóa toàn bộ vùng enemy (sau khi quay)
+    ILI9341_DrawRectangle(x, y, 25, 20, WHITE);
 }
 
 void init_enemies() { //hàm khởi tạo enemies
@@ -158,15 +362,12 @@ void init_enemies() { //hàm khởi tạo enemies
 	}
 }
 
-void erase_enemies(int x, int y) { //hàm xóa enemies
-	ILI9341_DrawRectangle(x, y, PLANE_WIDTH, PLANE_HEIGHT, WHITE);
-}
 void update_enemies() { //hàm cập nhật enemies
 	for (int i = 0; i < current_enemy_count; i++) {
 		if (enemies[i].active) {
 			erase_enemies(enemies[i].x, enemies[i].y);
 
-			enemies[i].x -= level;
+			enemies[i].x -= level*3;
 
 			if (enemies[i].x <= 0) {
 				enemies[i].x = 320;
@@ -181,17 +382,57 @@ void update_enemies() { //hàm cập nhật enemies
 void init_boss() { //hàm khởi tạo boss
 	boss.x = 280;
 	boss.y = 20;
-	boss.hp = 10;
+	boss.hp = 20;
 	boss.active = 1;
 	boss.laser_timer = 0;
 }
 
-void draw_boss(int x, int y) { //vẽ boss
-	ILI9341_DrawRectangle(x, y, BOSS_WIDTH, BOSS_HEIGHT, RED);
+//void draw_boss(int x, int y) { //vẽ boss
+//	ILI9341_DrawRectangle(x, y, BOSS_WIDTH, BOSS_HEIGHT, RED);
+//}
+//
+//void erase_boss(int x, int y) { //xóa boss
+//	ILI9341_DrawRectangle(x, y, BOSS_WIDTH, BOSS_HEIGHT, WHITE);
+//}
+void draw_boss(int x, int y) { // vẽ boss
+    // Thân chính (oval lớn)
+    ILI9341_DrawRectangle(x + 20, y + 15, 40, 20, GREEN);
+    ILI9341_DrawRectangle(x + 15, y + 20, 50, 10, GREEN);
+
+    // Đầu boss (phần nhọn phía trước)
+    ILI9341_DrawRectangle(x + 65, y + 22, 10, 6, DARKGREEN);
+
+    // Cánh trên
+    ILI9341_DrawRectangle(x + 10, y + 5, 60, 8, GREEN);
+    ILI9341_DrawRectangle(x + 5, y + 8, 70, 4, GREEN);
+
+    // Cánh dưới
+    ILI9341_DrawRectangle(x + 10, y + 37, 60, 8, GREEN);
+    ILI9341_DrawRectangle(x + 5, y + 40, 70, 4, GREEN);
+
+    // Động cơ/Turbin (4 cái)
+    ILI9341_DrawRectangle(x + 8, y + 13, 6, 8, DARKGREEN);   // trái trên
+    ILI9341_DrawRectangle(x + 8, y + 29, 6, 8, DARKGREEN);   // trái dưới
+    ILI9341_DrawRectangle(x + 66, y + 13, 6, 8, DARKGREEN);  // phải trên
+    ILI9341_DrawRectangle(x + 66, y + 29, 6, 8, DARKGREEN);  // phải dưới
+
+    // Đuôi
+    ILI9341_DrawRectangle(x, y + 20, 15, 10, GREEN);
+    ILI9341_DrawRectangle(x - 5, y + 23, 8, 4, GREEN);
+
+    // Cửa sổ/Cockpit
+    ILI9341_DrawRectangle(x + 35, y + 22, 8, 6, BLUE);
+
+    // Chi tiết nhỏ (đèn/cảm biến)
+    ILI9341_DrawPixel(x + 25, y + 18, RED);
+    ILI9341_DrawPixel(x + 55, y + 18, RED);
+    ILI9341_DrawPixel(x + 25, y + 32, RED);
+    ILI9341_DrawPixel(x + 55, y + 32, RED);
 }
 
-void erase_boss(int x, int y) { //xóa boss
-	ILI9341_DrawRectangle(x, y, BOSS_WIDTH, BOSS_HEIGHT, WHITE);
+void erase_boss(int x, int y) { // xóa boss
+    // Xóa toàn bộ vùng boss bằng cách vẽ hình chữ nhật trắng lớn
+    ILI9341_DrawRectangle(x - 5, y + 5, 85, 45, WHITE);
 }
 
 void fire_boss_laser() { // hàm bắn đạn của boss
@@ -406,21 +647,44 @@ int check_bullet_boss_collision() {
 	return 0;
 }
 
-void show_victory_screen() { //màn hình chiến thắng
-	ILI9341_FillScreen(BLACK);
+//void show_victory_screen() { //màn hình chiến thắng
+//	ILI9341_FillScreen(BLACK);
+//
+//// Hiệu ứng "pháo hoa" đơn giản
+//	for (int r = 0; r < 60; r += 4) {
+//		ILI9341_DrawHollowCircle(80, 80, r, YELLOW);
+//		ILI9341_DrawHollowCircle(240, 100, r, GREEN);
+//		ILI9341_DrawHollowCircle(160, 160, r, RED);
+//		HAL_Delay(30);
+//	}
+//
+//// Tiêu đề chiến thắng
+//	ILI9341_DrawText("YOU WIN!", FONT3, 90, 100, GREEN, BLACK);
+//	ILI9341_DrawText("Congratulations", FONT3, 60, 160, WHITE, BLACK);
+//	ILI9341_DrawText("Press RESET to play again", FONT2, 30, 270, CYAN, BLACK);
+//}
 
-// Hiệu ứng "pháo hoa" đơn giản
-	for (int r = 0; r < 60; r += 4) {
-		ILI9341_DrawHollowCircle(80, 80, r, YELLOW);
-		ILI9341_DrawHollowCircle(240, 100, r, GREEN);
-		ILI9341_DrawHollowCircle(160, 160, r, RED);
-		HAL_Delay(30);
-	}
+void show_victory_screen() { // màn hình chiến thắng
+    ILI9341_FillScreen(BLACK);
 
-// Tiêu đề chiến thắng
-	ILI9341_DrawText("YOU WIN!", FONT3, 90, 100, GREEN, BLACK);
-	ILI9341_DrawText("Congratulations", FONT3, 60, 160, WHITE, BLACK);
-	ILI9341_DrawText("Press RESET to play again", FONT2, 30, 270, CYAN, BLACK);
+    // Hiệu ứng "pháo hoa" đơn giản
+    for (int r = 0; r < 60; r += 4) {
+        ILI9341_DrawHollowCircle(80, 80, r, YELLOW);
+        ILI9341_DrawHollowCircle(240, 100, r, GREEN);
+        ILI9341_DrawHollowCircle(160, 160, r, RED);
+        HAL_Delay(30);
+    }
+
+    // Tiêu đề chiến thắng
+    ILI9341_DrawText("YOU WIN!", FONT3, 90, 100, GREEN, BLACK);
+
+    // Hiển thị điểm số
+    char score_msg[30];
+    sprintf(score_msg, "Final Score: %d", point);
+    ILI9341_DrawText(score_msg, FONT3, 50, 130, YELLOW, BLACK);
+
+    ILI9341_DrawText("Congratulations", FONT3, 60, 160, WHITE, BLACK);
+    ILI9341_DrawText("Press RESET to play again", FONT2, 30, 270, CYAN, BLACK);
 }
 
 void show_game_over_screen() {
@@ -535,6 +799,52 @@ void check_bullet_enemy_collision() { //hàm check máy bay địch chạm đạ
 	}
 }
 
+void show_welcome_screen() {
+    ILI9341_FillScreen(WHITE);
+
+    // Hiển thị tiêu đề
+    ILI9341_DrawText("WELCOME TO", FONT3, 90, 80, RED, WHITE);
+    ILI9341_DrawText("AIR WAR", FONT4, 110, 100, BLUE, WHITE);
+    ILI9341_DrawText("PRESS TO START", FONT3, 90, 140, BLUE, WHITE);
+
+    // Khởi tạo máy bay và địch cho demo
+    int demo_plane_y = 120;
+    int direction = 1;
+    int demo_enemy_y = 30;
+
+    uint32_t last_update = HAL_GetTick();
+
+    while (!plane_move_flag) { // Đợi cho đến khi nhấn nút thật sự
+        uint32_t now = HAL_GetTick();
+
+        if (now - last_update >= 100) {
+            // Cập nhật máy bay demo bay lên xuống
+            int old_y = demo_plane_y;
+            demo_plane_y += direction * 5;
+            if (demo_plane_y > 180 || demo_plane_y < 60) direction *= -1;
+
+            // Xóa và vẽ lại máy bay
+            erase_plane(plane_x, old_y);
+            draw_plane(plane_x, demo_plane_y);
+
+            // Địch bay ngang đơn giản
+            static int enemy_x = 220;
+            erase_enemies(enemy_x, demo_enemy_y);
+            enemy_x -= 10;
+            if (enemy_x < -20) enemy_x = 220;
+            draw_enemies(enemy_x, demo_enemy_y);
+
+            last_update = now;
+        }
+    }
+    if (plane_move_flag) {
+        ILI9341_FillScreen(WHITE);  // Xóa màn hình welcome
+        plane_move_flag = 0;        // Reset flag để không bị bắn ngay khi vào game
+        return;                     // Thoát khỏi hàm show_welcome_screen()
+    }
+}
+
+
 int check_collision(int x1, int y1, int w1, int h1, int x2, int y2, int w2,
 		int h2)
 // hàm check va chạm máy bay ta với địch
@@ -584,6 +894,7 @@ int main(void) {
 	ILI9341_SetRotation(SCREEN_HORIZONTAL_2); // khởi tạo trục Oxy
 
 	srand(time(NULL)); // lệnh này khởi tạo "seed" (hạt giống) cho bộ sinh số ngẫu nhiên rand()
+	show_welcome_screen();
 
 	/* USER CODE END 2 */
 
@@ -598,15 +909,17 @@ int main(void) {
 			bullets[i].active = 0;
 
 		draw_plane(plane_x, plane_y);
-		init_enemies(); // ← Thêm dòng này
+		init_enemies();
 		draw_score(point);
+		level_start_time = HAL_GetTick(); // Bắt đầu đếm thời gian level đầu tiên
 
 		while (1) {
-
+			current_time = HAL_GetTick();
 			draw_score(point);
 			update_bullets();
 			if (level <= 2) {
-				update_enemies(); // ← Thêm dòng này
+				draw_plane(plane_x, plane_y);
+				update_enemies();
 				for (int i = 0; i < current_enemy_count; i++) {
 					if (enemies[i].active
 							&& check_collision(plane_x, plane_y, PLANE_WIDTH,
@@ -620,14 +933,6 @@ int main(void) {
 				}
 
 				check_bullet_enemy_collision();
-//			if (plane_move_flag) {
-//				plane_move_flag = 0;
-//				int old_y = plane_y;
-//				plane_y = (plane_y + 5) % 220;
-//				erase_plane(plane_x, old_y);
-//				draw_plane(plane_x, plane_y);
-//				shoot_bullet();
-//			}
 				if (plane_move_flag) {
 					plane_move_flag = 0;
 					shoot_bullet();  // chỉ bắn, không di chuyển
@@ -635,11 +940,6 @@ int main(void) {
 
 				if (plane_move_left_flag) {
 					plane_move_left_flag = 0;
-//				int old_x = plane_x;
-//				plane_x -= 5;
-//				if (plane_x < 0) plane_x = 0;
-//				erase_plane(old_x, plane_y);
-//				draw_plane(plane_x, plane_y);
 					int old_y = plane_y;
 					if (plane_y < 220) {
 						plane_y = plane_y + 10;
@@ -657,19 +957,19 @@ int main(void) {
 					erase_plane(plane_x, old_y);
 					draw_plane(plane_x, plane_y);
 				}
-				if (point >= level * 100) {
-					level++;
-					current_enemy_count += 2;
-					init_enemies();
-					point = 0;
+				if (current_time - level_start_time >= LEVEL_DURATION) {
+				    level_start_time = HAL_GetTick(); // Reset thời gian cho level mới
+				    level++;
+				    current_enemy_count += 2;
+				    init_enemies();
 
-					// Hiển thị thông báo level up
-					ILI9341_FillScreen(WHITE);
-					char msg[30];
-					sprintf(msg, "LEVEL %d", level);
-					ILI9341_DrawText(msg, FONT3, 50, 120, BLUE, WHITE);
-					HAL_Delay(1000);  // Hiển thị 1 giây
-					ILI9341_FillScreen(WHITE);  // Dọn lại màn hình
+				    // Hiển thị thông báo level up
+				    ILI9341_FillScreen(WHITE);
+				    char msg[30];
+				    sprintf(msg, "LEVEL %d", level);
+				    ILI9341_DrawText(msg, FONT3, 50, 120, BLUE, WHITE);
+				    HAL_Delay(1000);
+				    ILI9341_FillScreen(WHITE);
 				}
 			} else if (level == 3) {
 				// Hiển thị thông báo level up
@@ -682,9 +982,12 @@ int main(void) {
 				ILI9341_FillScreen(WHITE);
 				init_boss();
 				draw_boss(boss.x, boss.y);
+				draw_plane(plane_x, plane_y);
+				boss_start_time = HAL_GetTick(); // Bắt đầu đếm thời gian boss
 				uint32_t now = HAL_GetTick(); // Lấy thời gian hiện tại (milis)
-
 				while (1) {
+					draw_score(point);
+					now = HAL_GetTick();
 					if (now - last_boss_fire_time >= boss_fire_interval) {
 						fire_boss_laser();
 						last_boss_fire_time = now;
@@ -694,19 +997,35 @@ int main(void) {
 					update_boss();
 					update_boss_bullets();
 					if (check_bullet_boss_collision() == 1) {
-						show_victory_screen();
-						while (1)
-							;  // Dừng trò chơi
+					    // Tính điểm thưởng khi tiêu diệt boss
+					    uint32_t boss_kill_time = now - boss_start_time;
+					    uint32_t seconds_taken = boss_kill_time / 1000; // Chuyển về giây
+
+					    int bonus_points = 500 - seconds_taken;
+					    if (bonus_points < 100) {
+					        bonus_points = 100; // Tối thiểu 100 điểm
+					    }
+
+					    point += bonus_points;
+
+					    // Hiển thị điểm thưởng
+					    ILI9341_FillScreen(WHITE);
+					    char bonus_msg[50];
+					    sprintf(bonus_msg, "BOSS KILLED!");
+					    ILI9341_DrawText(bonus_msg, FONT3, 30, 100, RED, WHITE);
+
+					    sprintf(bonus_msg, "Time: %lu seconds", seconds_taken);
+					    ILI9341_DrawText(bonus_msg, FONT2, 50, 130, BLUE, WHITE);
+
+					    sprintf(bonus_msg, "Bonus: +%d points", bonus_points);
+					    ILI9341_DrawText(bonus_msg, FONT2, 40, 150, GREEN, WHITE);
+
+					    HAL_Delay(5000); // Hiển thị 5 giây
+
+					    show_victory_screen();
+					    while (1); // Dừng trò chơi
 					}
 
-//				if (plane_move_flag) {
-//					plane_move_flag = 0;
-//					int old_y = plane_y;
-//					plane_y = (plane_y + 5) % 220;
-//					erase_plane(plane_x, old_y);
-//					draw_plane(plane_x, plane_y);
-//					shoot_bullet();
-//				}
 					if (plane_move_flag) {
 						plane_move_flag = 0;
 						shoot_bullet();  // chỉ bắn, không di chuyển
@@ -731,7 +1050,7 @@ int main(void) {
 			}
 		}
 
-		HAL_Delay(200); // Điều chỉnh tốc độ trò chơi
+		HAL_Delay(100); // Điều chỉnh tốc độ trò chơi
 	}
 
 	/* USER CODE END 3 */
