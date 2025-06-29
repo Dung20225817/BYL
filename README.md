@@ -35,7 +35,8 @@ Tiêu diệt Boss trước khi pháp lực cạn kiệt!
    ```bash
    git clone https://github.com/Dung20225817/BYL.git
 2. **Kết nối phần cứng**:
-- Kết nối KIT STM32f429zit6 với các nút bấm bằng chân PD8 và PD10
+- Kết nối KIT STM32f429zit6 với các nút bấm bằng chân PD8 và PD10 để di chuyển trái phải
+- Nút PA0 để bắn
 3. **Mở project bằng STM32CubeIDE**:
 - File → Open Projects from File System... 
 - Chọn thư mục project vừa clone
@@ -44,7 +45,7 @@ Tiêu diệt Boss trước khi pháp lực cạn kiệt!
 |   Hành động	  |            Mô tả                        |
 |----------------|-----------------------------------------|
 |Máy bay bắn đạn |Tự động bắn theo chu kỳ, điều khiển bằng nút bấm           |
-|Máy bay địch	  |  Tăng dần số lượng theo mỗi màn chơi    |
+|Máy bay địch	  |  Tăng dần số lượng, tốc độ theo mỗi màn chơi    |
 |Boss            |Bắn đạn nhiều kiểu: shotgun, burst, wave  |
 |Kết thúc	     |Thắng nếu boss bị tiêu diệt              |
   
